@@ -97,14 +97,6 @@ def getWav(sourceFile, fps=60):
     os.remove('temp.wav')
     return samplerate, data
 
-'''
-V Get the frame asociated with the given timestamps
-X go back from that frame until the audio is exceeded first and then the sound is lower than the threshold
-X go forward from that frame until the audio is lower than the audio threshold
-X add clip padding to each end of the clip
-V export as a .fcpxml
-'''
-
 if __name__ == '__main__':
 
     file = '2021-08-03 10-23-52.mp4'
