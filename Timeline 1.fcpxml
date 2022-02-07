@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.9">
+    <resources>
+        <asset hasVideo="1" name="2022-02-06 20-56-21.mp4" hasAudio="1" id="r1" start="0s" duration="999999s" audioChannels="2" format="r0">
+            <media-rep src="file://localhost/X:/vods/2022-02-06%2020-56-21.mp4" kind="original-media"/>
+        </asset>
+    </resources>
+    <library>
+        <event name="Timeline">
+            <project name="Timeline">
+                <sequence tcFormat="NDF" format="r0">
+                    <spine>
+                        <asset-clip name="2022-02-06 20-56-21.mp4" ref="r1" offset="3600/1s" start="357/10s" duration="179/60s" enabled="1" tcFormat="NDF" format="r0">
+                        </asset-clip>
+                        <asset-clip name="2022-02-06 20-56-21.mp4" ref="r1" offset="216179/60s" start="2519/60s" duration="161/60s" enabled="1" tcFormat="NDF" format="r0">
+                        </asset-clip>
+                        <asset-clip name="2022-02-06 20-56-21.mp4" ref="r1" offset="10817/3s" start="635/12s" duration="301/60s" enabled="1" tcFormat="NDF" format="r0">
+                        </asset-clip>
+                        <asset-clip name="2022-02-06 20-56-21.mp4" ref="r1" offset="216641/60s" start="1379/20s" duration="553/60s" enabled="1" tcFormat="NDF" format="r0">
+                        </asset-clip>
+                    </spine>
+                </sequence>
+            </project>
+        </event>
+    </library>
+</fcpxml>

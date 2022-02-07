@@ -3,30 +3,44 @@ from subprocess import call
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import wavfile
-import xml.etree.ElementTree as ET
 from math import ceil
 
-XML_TEMPLATE = '''<fcpxml version="1.8">
+'''
+to do
+
+fix case (snake case)
+do xml formatting with simple string manip
+fix xml formatting (maybe switch to something simpler)
+make sure everything works for files in different folders, etc
+
+'''
+
+FCPXML_TEMPLATE = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.9">
     <resources>
-        <format name="FFVideoFormat1080p60" frameDuration="1/60s" height="1080" id="r0" width="1920"/>
-        <format height="1080" id="r1" width="1920" name="FFVideoFormatRateUndefined" frameDuration="1/60s"/>
-        <asset name="{file}" duration="99999s" audioSources="1" hasVideo="1" id="r2" start="0s" hasAudio="1" src="file://{file_path}" format="r1" audioChannels="2"/>
+        <asset hasVideo="1" name="{file_name}" hasAudio="1" id="r1" start="0s" duration="999999s" audioChannels="2" format="r0">
+            <media-rep src="{file_location}" kind="original-media"/>
+        </asset>
     </resources>
     <library>
-        <event>
+        <event name="Timeline">
             <project name="Timeline">
-                <sequence>
+                <sequence tcFormat="NDF" format="r0">
                     <spine>
+                        {asset_clips}
                     </spine>
                 </sequence>
             </project>
         </event>
     </library>
-</fcpxml>'''
-
-CLIP_TEMPLATE = '''<asset-clip name="{file}" duration="{total_frames}/{fps}s" start="{start_frame}/{fps}s" ref="r2" enabled="1" tcFormat="NDF" offset="{offset_frames}/{fps}s" format="r1">
-    <adjust-transform anchor="0 0" position="0 0" scale="1 1"/>
-</asset-clip>'''
+</fcpxml>
+'''
+ASSET_CLIP_TEMPLATE = '''
+                        <asset-clip name="{file_name}" ref="r1" offset="{offset}" start="{start}" duration="{duration}" enabled="1" tcFormat="NDF" format="r0">
+                        </asset-clip>
+'''
 
 MARKERS = {
     'Hotkey 1 was pressed':1,
@@ -36,37 +50,58 @@ MARKERS = {
     'Hotkey 5 was pressed':5
         }
 
-def toFrames(str_hhmmss,fps=60):
+def to_frames(str_hhmmss, fps=60):
+
     time_list = str_hhmmss.split(':')
+
     h = int(time_list[0])
     m = int(time_list[1])
     s = int(time_list[2])
-    return (h*3600+h*60+s)*fps
 
-def makeFCPXML(sourceFile, outputFile, clipList, fps=60, path=''):
+    return (h*3600+m*60+s)*fps
+
+def makeFCPXML(source_file, outputFile, clipList, fps=60, path=''):
+
+    
+
+    '''
+
+    OLD CODE
 
     # modify this code later to work with other paths instead of the cwd
+    file = source_file.split('\\')[-1].replace('\\', '/')
+    file_path = source_file.replace('\\', '/').replace(' ', '%')
 
-    fcpxml_temp = ET.fromstring(XML_TEMPLATE.format(file=sourceFile, file_path=os.getcwd()+'/'+sourceFile))
+    print(file)
+    print(file_path)
+
+    fcpxml_temp = ET.fromstring(XML_TEMPLATE.format(file=file, file_path=file_path))
     fcpxml_spine = fcpxml_temp.findall('*')[1].find('*/*/*/*')
 
     video_duration = 0
 
     for clip in clipList:
-        fcpxml_spine.append(ET.fromstring(CLIP_TEMPLATE.format(file=sourceFile, fps=str(fps), total_frames=str(clip['total_frames']), start_frame=str(clip['start_frame']), offset_frames=str(video_duration))))
+        fcpxml_spine.append(ET.fromstring(CLIP_TEMPLATE.format(file=file, fps=str(fps), total_frames=str(clip['total_frames']), start_frame=str(clip['start_frame']), offset_frames=str(video_duration))))
         video_duration += clip['total_frames'] + 1
 
     fcpxml_tree = ET.ElementTree(fcpxml_temp)
     fcpxml_tree.write(outputFile)
 
-def getMarkers(sourceName, path='/', fps=60):
+    print(outputFile)
+
+    '''
+
+def get_markers(source_path, logs_path, fps=60):
 
     # modify this code later to work with other paths instead of the cwd
+    sourceName = source_path.split('\\')[-1]
+    print(sourceName)
 
     # reads the log file and saves the relevant logs in a list
-    with open('log.txt', 'r') as all_logs:
+    with open(logs_path, 'r') as all_logs:
         p_vod_dir = sourceName.split(' ')
         start_text = p_vod_dir[0] + ' ' + p_vod_dir[1].replace('-',':')[0:-4]
+        print(start_text)
         o_logs = all_logs.read().split('EVENT:START RECORDING @ ' + start_text)[1].split('EVENT:STOP RECORDING')[0].split('\n\n')[1:-1]
 
     # creates a dict of values corresponding to MARKERS and their corresponding times in the format H:MM:SS
@@ -77,7 +112,7 @@ def getMarkers(sourceName, path='/', fps=60):
             try:
                 logs.append({
                     'marker':MARKERS[marker],
-                    'frame':toFrames(log.split('\n')[1].split(' Record Time Marker')[0], fps=fps)
+                    'frame':to_frames(log.split('\n')[1].split(' Record Time Marker')[0], fps=fps)
                     })
             except:
                 print('NO MARKER EQUALING '+marker)
@@ -89,22 +124,26 @@ def getMaxVolume(s):
     minv = float(np.min(s))
     return max(maxv,-minv)
 
-def getWav(sourceFile, fps=60):
+def getWav(source_file, fps=60):
 
     # maybe edit to use a temp folder
-    call('ffmpeg -i {} temp.wav'.format(sourceFile.replace(' ','\ ')), shell=True)
+    call('ffmpeg -i "{}" temp.wav'.format(source_file.replace(' ',' ')), shell=True)
     samplerate, data = wavfile.read('temp.wav')
     os.remove('temp.wav')
     return samplerate, data
 
 if __name__ == '__main__':
 
-    file = '2021-08-03 10-23-52.mp4'
+    # TO MAKE SURE EVERYTHING WORKS,
+    # INSTEAD OF DOING THE AUDIOTHRESHOLD STUFF, JUST DO A FEW SECONDS BEFORE OR AFTER OR BOTH
+
+    RECORDING = 'X:\\vods\\2021-12-23 22-40-10.mp4'
+    LOGS = 'C:\\Users\\ethan\\Documents\\infowriter\\logs.txt'
     fps = 60
     audioThreshold = 0.1 # 0<x<1
     #file = input('FILE: ')
-    markers = getMarkers(file)
-    audioSamplerate, audioData = getWav(file)
+    markers = get_markers(sourcePath=RECORDING, logs_path=LOGS)
+    audioSamplerate, audioData = getWav(RECORDING)
     maxVolume = getMaxVolume(audioData)
     samplesPerFrame =  int(audioSamplerate/fps)
     totalFrameCount = ceil(len(audioData)/samplesPerFrame)
@@ -133,4 +172,4 @@ if __name__ == '__main__':
 
             clips.append({'total_frames':upperFrameBound-lowerFrameBound,'start_frame':lowerFrameBound})
 
-    makeFCPXML(file, file.replace('.mp4', '.fcpxml'), clips)
+    makeFCPXML(RECORDING, RECORDING.replace('.mp4', '.fcpxml'), clips)
