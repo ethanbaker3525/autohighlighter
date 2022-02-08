@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import wavfile
 from math import ceil
+from pathlib import Path
 
 '''
 to do
@@ -21,7 +22,7 @@ FCPXML_TEMPLATE = '''
 <fcpxml version="1.9">
     <resources>
         <asset hasVideo="1" name="{file_name}" hasAudio="1" id="r1" start="0s" duration="999999s" audioChannels="2" format="r0">
-            <media-rep src="{file_location}" kind="original-media"/>
+            <media-rep src="file://localhost/{file_path}" kind="original-media"/>
         </asset>
     </resources>
     <library>
@@ -29,7 +30,7 @@ FCPXML_TEMPLATE = '''
             <project name="Timeline">
                 <sequence tcFormat="NDF" format="r0">
                     <spine>
-                        {asset_clips}
+{asset_clips}
                     </spine>
                 </sequence>
             </project>
@@ -60,36 +61,29 @@ def to_frames(str_hhmmss, fps=60):
 
     return (h*3600+m*60+s)*fps
 
-def makeFCPXML(source_file, outputFile, clipList, fps=60, path=''):
+def make_fcpxml(video_path, output_path, clip_list, fps=60, path=''):
 
-    
+    video_name = Path(video_path)
+    output_name = Path(output_path)
 
-    '''
+    if not video_name().exists():
+        print("File does not extist")
 
-    OLD CODE
+    else:
 
-    # modify this code later to work with other paths instead of the cwd
-    file = source_file.split('\\')[-1].replace('\\', '/')
-    file_path = source_file.replace('\\', '/').replace(' ', '%')
+        clips = ''
+        video_duration = 0
 
-    print(file)
-    print(file_path)
+        for clip in clip_list:
+            clips += ASSET_CLIP_TEMPLATE.format(file_name=video_name.name, offset=str(video_duration), start=str(clip['start_frame']), duration=str(clip['total_frames']))
+            video_duration += str(clip['total_frames'])
 
-    fcpxml_temp = ET.fromstring(XML_TEMPLATE.format(file=file, file_path=file_path))
-    fcpxml_spine = fcpxml_temp.findall('*')[1].find('*/*/*/*')
-
-    video_duration = 0
-
-    for clip in clipList:
-        fcpxml_spine.append(ET.fromstring(CLIP_TEMPLATE.format(file=file, fps=str(fps), total_frames=str(clip['total_frames']), start_frame=str(clip['start_frame']), offset_frames=str(video_duration))))
-        video_duration += clip['total_frames'] + 1
-
-    fcpxml_tree = ET.ElementTree(fcpxml_temp)
-    fcpxml_tree.write(outputFile)
-
-    print(outputFile)
-
-    '''
+        with output_name.open() as file:
+            file.write(FCPXML_TEMPLATE.format(
+                file_name=video_name.name, 
+                file_path=video_name.as_posix().replace(' ','%')),
+                asset_clips=clips
+                ) # formatting the template with specific paramaters
 
 def get_markers(source_path, logs_path, fps=60):
 
@@ -172,4 +166,4 @@ if __name__ == '__main__':
 
             clips.append({'total_frames':upperFrameBound-lowerFrameBound,'start_frame':lowerFrameBound})
 
-    makeFCPXML(RECORDING, RECORDING.replace('.mp4', '.fcpxml'), clips)
+    make_fcpxml(RECORDING, RECORDING.replace('.mp4', '.fcpxml'), clips)
