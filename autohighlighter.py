@@ -7,17 +7,11 @@ from math import ceil
 from pathlib import Path
 
 '''
-to do
-
-fix case (snake case)
-do xml formatting with simple string manip
-fix xml formatting (maybe switch to something simpler)
 make sure everything works for files in different folders, etc
 
 '''
 
-FCPXML_TEMPLATE = '''
-<?xml version="1.0" encoding="UTF-8"?>
+FCPXML_TEMPLATE = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE fcpxml>
 <fcpxml version="1.9">
     <resources>
@@ -36,8 +30,7 @@ FCPXML_TEMPLATE = '''
             </project>
         </event>
     </library>
-</fcpxml>
-'''
+</fcpxml>'''
 ASSET_CLIP_TEMPLATE = '''
                         <asset-clip name="{file_name}" ref="r1" offset="{offset}" start="{start}" duration="{duration}" enabled="1" tcFormat="NDF" format="r0">
                         </asset-clip>
@@ -83,12 +76,12 @@ def make_fcpxml(video_path, output_path, clip_list, fps=60, path=''):
             clips += ASSET_CLIP_TEMPLATE.format(file_name=video_name.name, offset=str(video_duration), start=str(clip['start_frame']), duration=str(clip['total_frames']))
             video_duration += clip['total_frames']
 
-        with output_name.open() as file:
+        with output_name.open('w') as file:
             file.write(FCPXML_TEMPLATE.format(
                 file_name=video_name.name, 
-                file_path=video_name.as_posix().replace(' ','%')),
+                file_path=video_name.as_posix().replace(' ','%20'),
                 asset_clips=clips
-                ) # formatting the template with specific paramaters
+                )) # formatting the template with specific paramaters
 
 
 # 
@@ -103,18 +96,26 @@ def get_markers(video_path, logs_path, fps=60):
     elif not logs_name.exists():
         print("logs does not extist")
 
+    # this code is farily messy and overcomplicated, possibly rewrite at some point if you feel like it
+
     else:
 
-        # modify this code later to work with other paths instead of the cwd
-        source_name = video_path.split('\\')[-1]
+        source_name = str(video_name.name)
         print(source_name)
 
         # reads the log file and saves the relevant logs in a list
         with logs_name.open() as all_logs:
             p_vod_dir = source_name.split(' ')
+            # getting the time code formating correct
             start_text = p_vod_dir[0] + ' ' + p_vod_dir[1].replace('-',':')[0:-4]
             print(start_text)
-            o_logs = all_logs.read().split('EVENT:START RECORDING @ ' + start_text)[1].split('EVENT:STOP RECORDING')[0].split('\n\n')[1:-1]
+
+            all_logs_read = all_logs.read()
+
+            if not start_text in all_logs_read:
+                print("no recording in logs")
+
+            o_logs = all_logs_read.split('EVENT:START RECORDING @ ' + start_text)[1].split('EVENT:STOP RECORDING')[0].split('\n\n')[1:-1]
 
         # creates a dict of values corresponding to MARKERS and their corresponding times in the format H:MM:SS
         logs = []
@@ -155,7 +156,7 @@ if __name__ == '__main__':
     # TO MAKE SURE EVERYTHING WORKS,
     # INSTEAD OF DOING THE AUDIOTHRESHOLD STUFF, JUST DO A FEW SECONDS BEFORE OR AFTER OR BOTH
 
-    RECORDING = 'X:\\vods\\2021-12-23 22-40-10.mp4'
+    RECORDING = 'X:\\vods\\2022-02-19 17-31-27.mp4'
     LOGS = 'C:\\Users\\ethan\\Documents\\infowriter\\logs.txt'
     fps = 60
     audioThreshold = 0.1 # 0<x<1
@@ -168,11 +169,6 @@ if __name__ == '__main__':
     totalFrameCount = ceil(len(audioData)/samplesPerFrame)
 
     assert audioSamplerate/fps == samplesPerFrame
-
-    '''
-
-    print(markers)
-
     frameVolumes = []
     for i in range(totalFrameCount):
         frameRange = audioData[i*samplesPerFrame:(i+1)*samplesPerFrame-1]
@@ -193,5 +189,6 @@ if __name__ == '__main__':
 
             clips.append({'total_frames':upperFrameBound-lowerFrameBound,'start_frame':lowerFrameBound})
 
-    make_fcpxml(RECORDING, RECORDING.replace('.mp4', '.fcpxml'), clips)
-    '''
+    make_fcpxml(RECORDING, 'test.fcpxml', clips)
+
+
